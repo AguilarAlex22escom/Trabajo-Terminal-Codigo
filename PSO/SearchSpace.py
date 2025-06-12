@@ -1,3 +1,4 @@
+import random as rnd
 from Swarm import Swarm
 from Optimization import Optimization
 
@@ -5,13 +6,10 @@ from Optimization import Optimization
 class SearchSpace:
     # itr = Number of iterations.
     # n = Number of particles.
-    def __init__(self, w, c1, c2, itr, n, dim, xmin, xmax, fitness_name):
-        self.w = w
-        self.c1 = c1
-        self.c2 = c2
+    def __init__(self, itr, n, dim, xmin, xmax, fitness_name):
         self.itr = itr
         self.n = n
-        self.fitness_name = fitness_name
+        self.fitness_name = fitness_name.lower()
         self.xmin = xmin
         self.xmax = xmax
         self.dim = dim
@@ -21,38 +19,32 @@ class SearchSpace:
     def search_global_minimum(self):
         swarm = Swarm(self.n)
         # particles = swarm.generate_particle_swarm(self.w, self.c1, self.c2, self.dim, self.limits)
-        global_minimun = 0.0
+        global_minimum = 1e-6
 
         if self.fitness_name == "sphere":
             fitness_func = Optimization.sphere_func
-            '''
-            min = -100
-            max = 100            
-            '''
-        elif self.fitness_name == "rastrigrin":
+
+        elif self.fitness_name == "rastrigin":
             fitness_func = Optimization.rastrigrin_func
-            '''
-            min = -5.12
-            max = 5.12
-            '''
+
         elif self.fitness_name == "rosenbrock":
             fitness_func = Optimization.rosenbrock_func
-            '''
-            min = -30
-            max = 30
-            '''
+
         elif self.fitness_name == "griewank":
             fitness_func = Optimization.griewank_func
-            '''
-            min = -100
-            max = 100
-            '''
-        swarm.generate_particle_swarm(self.w, self.c1, self.c2, self.xmin, self.xmax, self.dim, fitness_func)
+
+        else:
+            raise ValueError(f"La función {self.fitness_name} no es valida...\n")
+
+        swarm.initialize_particle_swarm(self.xmin, self.xmax, self.dim, fitness_func)
 
         print("------------------------------------------------------------")
-        for i in range(self.itr):
-            self.gbest, self.gbest_fitness, best_particle = swarm.update_gbest()
+        for t in range(self.itr):
+            
+            self.gbest, self.gbest_fitness, _ = swarm.update_gbest()
             swarm.update_particles(fitness_func)
+            swarm.update_parameters(itr=self.itr, t=t + 1)
+
             '''
             print("Número de iteración: " + str(i + 1))
             print(f"Partícula con la mejor posición: {best_particle.id}")
@@ -62,7 +54,7 @@ class SearchSpace:
             # time.sleep(1)
             '''
 
-            if self.gbest_fitness <= global_minimun:
+            if self.gbest_fitness <= global_minimum:
                 return self.gbest, self.gbest_fitness
 
         return self.gbest, self.gbest_fitness

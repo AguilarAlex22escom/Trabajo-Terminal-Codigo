@@ -17,11 +17,15 @@ class Particle:
     def update_velocity(self, gbest):
         r1 = random.random()
         r2 = random.random()
+
         for i in range(len(self.v)):
             cognitive = self.c1 * r1 * (self.pbest[i] - self.x[i])
             social = self.c2 * r2 * (gbest[i] - self.x[i])
             # v(t + 1)
             self.v[i] = (self.w * self.v[i]) + cognitive + social
+            # self.v[i] = self.v[i] + cognitive + social
+
+
 
     def update_position(self):
         # x(t + 1)
