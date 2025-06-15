@@ -1,15 +1,18 @@
 import random as rd
+import math
 from Ant import *
 from Optimization import Optimization
 
 class SearchSpace:
-    def __init__(self, k, dimensions, q, p, n, xmin, xmax, fitness_name):
-        self.k = k # Solutions file's size.
+    def __init__(self, K_max, dimensions, q, n, xmin, xmax, fitness_name, xi=0.6061, K_start=1):
+        self.K_max = K_max # Solutions file's size.
+        self.K_current = K_start
         self.s = [] # Solutions file.
+        self.s_fitness = [] # Fitness' solutions file.
         self.dimensions = dimensions # Number of dimensions.
         self.q = q # Convergence percentage
-        self.p = p # Evaporation percentage.
         self.n = n # Number of ants.
+        self.xi = xi
         self.ants = []
         self.xmin = xmin # Minimun limit.
         self.xmax = xmax # Maximun limit.
@@ -29,25 +32,61 @@ class SearchSpace:
             fitness_func = Optimization.griewank_func
         return fitness_func
 
+
+    def __build_initial_archive(self):
+        solutions = []
+        for ant in self.ants:
+            solutions.append((ant.get_best_position(), ant.get_best_fitness()))
+
+        solutions.sort(key=lambda x: x[1])
+        self.s = []
+        self.s_fitness = []
+
+        for i in range(min(self.K_current, len(solutions))):
+            self.s.append(solutions[i][0])
+            self.s_fitness.append(solutions[i][1])
+    
     def init_ants(self):
         self.ants = []
         for i in range(self.n):
-            ith_ant = Ant(i, self.p, self.dimensions, [self.xmin, self.xmax])
+            ith_ant = Ant(i, self.dimensions, [self.xmin, self.xmax], self.xi)
             ith_ant.init_position()
-            ith_ant.evaluate(self.__set_fitness_func())
+            ith_fitness = ith_ant.evaluate(self.__set_fitness_func())
             self.ants.append(ith_ant)
 
-        self.update_archive()
+        self.__build_initial_archive()
         return self.ants
 
-    def update_ants(self, weights):
-        if weights is None:
-            weights = self._compute_weights()
-            
-        elite_solutions = self.s  # Archive de soluciones élite
+    def __compute_weights(self):
+        if self.K_current == 0:
+            return []
         
+        weights = []
+        for i in range(self.K_current):
+            euler = math.exp(-0.5 * (((i + 1) / (self.q * self.K_current)) ** 2))
+            w = (1 / (self.q * self.K_current * math.sqrt(2 * math.pi))) * euler
+            weights.append(w)
+        total = sum(weights)
+
+        if total > 0:
+            weights = [w / total for w in weights]
+        else:
+            weights = [1 / self.K_current] * self.K_current
+
+        return weights
+
+    def __select_elite_solutions(self, weights):
+        return rd.choices(self.s, weights=weights, k=1)[0]  # Muestrear 'dim' veces
+    
+    def update_ants(self):
+        if not self.s:
+            return self.ants
+
+        weights = self.__compute_weights()
+
         for ant in self.ants:
-            ant.update_position(elite_solutions, self.k)
+            selected_solution = self.__select_elite_solutions(weights)
+            ant.update_position(selected_solution, self.s, self.K_current)
             fitness = ant.evaluate(self.__set_fitness_func())
             
             # Actualizar mejor solución global
@@ -55,53 +94,50 @@ class SearchSpace:
                 self.gbest_fitness = fitness
                 self.gbest = list(ant.pbest)
                 
-        self.update_archive()
+        self.__update_archive()
         return self.ants
 
-    def update_archive(self):
+    def __update_archive(self):
         archive_ants = []
         for i, solution in enumerate(self.s):
-            temp_ant = Ant(-i-1, self.p, self.dimensions, [self.xmin, self.xmax])
-            temp_ant.pbest = solution
-            temp_ant.pbest_fitness = self.__set_fitness_func()(solution)
-            archive_ants.append(temp_ant)
+            archive_ants.append((solution, self.s_fitness[i]))
             
         # Combinar hormigas actuales y soluciones del archivo
-        all_candidates = self.ants + archive_ants
+        for ant in self.ants:
+            archive_ants.append((ant.get_best_position(), ant.get_best_fitness()))
         
-        # Ordenar por fitness y mantener las k mejores
-        all_candidates.sort(key=lambda a: a.pbest_fitness)
-        self.s = [ant.pbest for ant in all_candidates[:self.k]]
+        # Ordenar por fitness.
+        archive_ants.sort(key=lambda x: x[1])
+        if self.K_current < self.K_max:
+            self.K_current = min(self.K_max, self.K_current + 1)
         
-        # Actualizar mejor solución global si es necesario
-        if all_candidates[0].pbest_fitness < self.gbest_fitness:
-            self.gbest_fitness = all_candidates[0].pbest_fitness
-            self.gbest = list(all_candidates[0].pbest)
+        self.s = []
+        self.s_fitness = []
 
-    def _compute_weights(self):
-        weights = [1 / (self.q * self.k * math.sqrt(2 * math.pi)) * math.exp(self.q * (i**2) / (self.k**2))
-                    for i in range(self.k)]
-        total = sum(weights)
-        return [w / total for w in weights]
+        for i in range(min(self.K_current, len(archive_ants))):
+            self.s.append(archive_ants[i][0])
+            self.s_fitness.append(archive_ants[i][1])
 
-    def select_elite_positions(self, weights):
-        return rd.choices(self.s, weights=weights, k=self.dimensions)  # Muestrear 'dim' veces
+        # Actualizar mejor solución global.
+        if self.s_fitness and self.s_fitness[0] < self.gbest_fitness:
+            self.gbest_fitness = self.s_fitness[0]
+            self.gbest = list(self.s[0])
 
-    def search_global_minimum(self, max_iterations):
+
+    def search_global_minimum(self, iterations, tolerance=1e-6, verbose=False):
         self.init_ants()
             
-        for _ in range(max_iterations):
-            weights = self._compute_weights()
-            self.update_ants(weights)
+        convergence_itr = iterations
+
+        for itr in range(iterations):
+            self.update_ants()
                 
             # Print progress.
-            '''
-            if (iteration + 1) % 10 == 0:
-                print(f"Iteración {iteration + 1}: Mejor fitness = {self.gbest_fitness}")            
-            '''
+            if verbose and (itr + 1) % 10 == 0:
+                print(f"Iteración {itr + 1}: "
+                      # f"Mejor fitness = {self.gbest_fitness:.6e}, "
+                      f"Mejor fitness = {self.gbest_fitness}, "
+                      f"Tamaño archivo = {self.K_current}")
 
-            if self.gbest_fitness <= 1e-4:
-                return self.gbest, self.gbest_fitness
-
-        return self.gbest, self.gbest_fitness
-
+        return self.gbest, self.gbest_fitness, convergence_itr
+        

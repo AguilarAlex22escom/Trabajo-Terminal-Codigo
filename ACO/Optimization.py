@@ -11,6 +11,7 @@ class Optimization:
     def rastrigrin_func(position):
         n = len(position)
         rastrigrin = 10 * n + sum((dimension ** 2 - 10 * math.cos(2 * math.pi * dimension)) for dimension in position)
+        # rastrigrin = 10 + sum((dimension ** 2 - 10 * math.cos(2 * math.pi * dimension)) for dimension in position)
         return float(rastrigrin)
 
     @staticmethod
