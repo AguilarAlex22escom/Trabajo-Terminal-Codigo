@@ -8,8 +8,9 @@ def main():
     n = int(sys.argv[4])           # Número de hormigas
     dim = int(sys.argv[5])         # Dimensiones
     q = float(sys.argv[6])         # Porcentaje de convergencia (antes era 'p')
-    xmin = float(sys.argv[7])      # Límite mínimo
-    xmax = float(sys.argv[8])      # Límite máximo
+    xi = float(sys.argv[7])
+    xmin = float(sys.argv[8])      # Límite mínimo
+    xmax = float(sys.argv[9])      # Límite máximo
 
     # Crear el espacio de búsqueda con los parámetros correctos
     search_space = SearchSpace(
@@ -20,7 +21,7 @@ def main():
         xmin=xmin, 
         xmax=xmax, 
         fitness_name=fitness_name,
-        xi=0.6061  # Parámetro de desviación estándar
+        xi=xi  # Parámetro de desviación estándar
     )
     
     # Usar el método integrado de búsqueda que maneja todo el proceso
@@ -31,7 +32,7 @@ def main():
     
     print(f"\nBúsqueda completada en {convergence_iteration} iteraciones")
     print(f"Mejor fitness encontrado: {best_fitness:.6e}")
-    print(f"Mejor solución: {best_solution}")
+    print(f"Mejor solución: {[round(x, 6) for x in best_solution]}")
     print(f"Tamaño final del archivo: {search_space.K_current}")
 
 if __name__ == '__main__':
@@ -43,6 +44,7 @@ if __name__ == '__main__':
         print("  n: número de hormigas")
         print("  dim: número de dimensiones")
         print("  q: porcentaje de convergencia (0.0 - 1.0)")
+        print("  xi: consnte de intensificación (0.0 - 1.0)")
         print("  xmin: límite mínimo del espacio de búsqueda")
         print("  xmax: límite máximo del espacio de búsqueda")
         sys.exit(1)

@@ -2,7 +2,7 @@ import random as rd
 import math
 
 class Ant:
-    def __init__(self, id, dim, limits, xi=0.6061): # xi maybe 0.8257 too.
+    def __init__(self, id, dim, limits, xi): # xi maybe 0.8257 too.
         self.id = id
         self.dim = dim
         self.limits = limits  # [min, max]
@@ -25,13 +25,17 @@ class Ant:
 
     def update_position(self, selected_solution, archive_solutions, k):
         new_position = []
+        # adaptive_xi = self.xi * (1 + (max_iterations - iteration) / max_iterations)
         for dim in range(self.dim):
         # Obtener valores de esta dimensión en todas las soluciones élite
             mu = selected_solution[dim]
             dim_values = [sol[dim] for sol in archive_solutions]
             sigma = self.xi * sum(abs(x - mu) for x in dim_values) / max(1, k - 1)
-            
+        
             if sigma < 1e-10:
+                sigma = (self.limits[1] - self.limits[0]) * 0.01
+            
+            if sigma < 1e-20:
                 sigma = (self.limits[1] - self.limits[0]) * 0.01
 
             new_dim = rd.gauss(mu, sigma)

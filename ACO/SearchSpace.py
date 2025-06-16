@@ -4,7 +4,7 @@ from Ant import *
 from Optimization import Optimization
 
 class SearchSpace:
-    def __init__(self, K_max, dimensions, q, n, xmin, xmax, fitness_name, xi=0.6061, K_start=1):
+    def __init__(self, K_max, dimensions, q, n, xmin, xmax, fitness_name, xi, K_start=1):
         self.K_max = K_max # Solutions file's size.
         self.K_current = K_start
         self.s = [] # Solutions file.
@@ -31,7 +31,6 @@ class SearchSpace:
         elif self.fitness_name == "griewank":
             fitness_func = Optimization.griewank_func
         return fitness_func
-
 
     def __build_initial_archive(self):
         solutions = []
@@ -133,11 +132,19 @@ class SearchSpace:
             self.update_ants()
                 
             # Print progress.
-            if verbose and (itr + 1) % 10 == 0:
-                print(f"Iteración {itr + 1}: "
+            
+            if verbose and (itr) % 10 == 0:
+                print(f"Iteración {itr}: "
                       # f"Mejor fitness = {self.gbest_fitness:.6e}, "
-                      f"Mejor fitness = {self.gbest_fitness}, "
+                      f"Mejor fitness = {round(self.gbest_fitness, 6)}, "
                       f"Tamaño archivo = {self.K_current}")
+                
+            if self.gbest_fitness <= tolerance:
+                convergence_itr = itr + 1
+                if verbose:
+                    print(f"Convergencia alcanzada en iteración {convergence_itr}")
+                break
+            
 
         return self.gbest, self.gbest_fitness, convergence_itr
         

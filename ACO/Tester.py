@@ -24,7 +24,7 @@ class Tester:
         n = int(input("Número de hormigas (n): "))
         dim = int(input("Dimensión (dim): "))
         q = float(input("Valor de q: "))
-        p = float(input("Valor de p: "))
+        xi = float(input("Valor de xi: "))
         xmin = int(input("Límite mínimo: "))
         xmax = int(input("Límite máximo: "))
         results_file  = self.__create_results_file()
@@ -32,7 +32,7 @@ class Tester:
             for i in range(num_ejecuciones):
                 print(f'Ejecutando la iteración {i + 1}...')
 
-                aco = SearchSpace(k=k, dimensions=dim, q=q, p=p, n=n, xmin=xmin, xmax=xmax, fitness_name=fitness_name)
+                aco = SearchSpace(K_max=k, dimensions=dim, q=q, xi=xi, n=n, xmin=xmin, xmax=xmax, fitness_name=fitness_name)
                 gbest, gbest_fitness = aco.search_global_minimum(itr)
 
                 best_solutions.append(gbest)
@@ -44,6 +44,8 @@ class Tester:
                 end_time = time.time()
                 print(f'Iteración {i + 1} completada\n')
                 print(f"Tiempo de ejecución: {round(end_time - start_time, 4)} segundos\n")
+                start_time = 0.0
+
             stats = self.get_statistics(best_solutions=best_solutions, fitness=best_fitness)
             print(f'Resultados guardados')
             print(f"Estadísticas:\n{stats}")
